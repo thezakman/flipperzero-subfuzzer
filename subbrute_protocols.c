@@ -529,6 +529,7 @@ static const char* subbrute_protocol_names[] = {
     [SubBruteAttackPT226224bit4305] = "PT2262 24bit 430.5MHz",
     [SubBruteAttackPT226224bit433] = "PT2262 24bit 433MHz",
     [SubBruteAttackLoadFile] = "BF existing dump",
+    [SubBruteAttackAbout] = "About",
     [SubBruteAttackTotalCount] = "Total Count",
 };
 
@@ -537,7 +538,6 @@ static const char* subbrute_protocol_presets[] = {
     [FuriHalSubGhzPresetOok270Async] = "FuriHalSubGhzPresetOok270Async",
     [FuriHalSubGhzPresetOok650Async] = "FuriHalSubGhzPresetOok650Async",
     [FuriHalSubGhzPreset2FSKDev238Async] = "FuriHalSubGhzPreset2FSKDev238Async",
-    [FuriHalSubGhzPreset2FSKDev12KAsync] = "FuriHalSubGhzPreset2FSKDev12KAsync",
     [FuriHalSubGhzPreset2FSKDev476Async] = "FuriHalSubGhzPreset2FSKDev476Async",
     [FuriHalSubGhzPresetMSK99_97KbAsync] = "FuriHalSubGhzPresetMSK99_97KbAsync",
     [FuriHalSubGhzPresetGFSK9_99KbAsync] = "FuriHalSubGhzPresetGFSK9_99KbAsync",
@@ -587,7 +587,8 @@ const SubBruteProtocol* subbrute_protocol_registry[] = {
     [SubBruteAttackPT226224bit430] = &subbrute_protocol_pt2262_24bit_430,
     [SubBruteAttackPT226224bit4305] = &subbrute_protocol_pt2262_24bit_430_5,
     [SubBruteAttackPT226224bit433] = &subbrute_protocol_pt2262_24bit_433,
-    [SubBruteAttackLoadFile] = &subbrute_protocol_load_file};
+    [SubBruteAttackLoadFile] = &subbrute_protocol_load_file,
+    [SubBruteAttackAbout] = NULL};
 
 static const char* subbrute_protocol_file_types[] = {
     [CAMEFileProtocol] = "CAME",
@@ -653,6 +654,7 @@ const SubBruteProtocol* subbrute_protocol(SubBruteAttacks index) {
 }
 
 uint8_t subbrute_protocol_repeats_count(SubBruteAttacks index) {
+    if(!subbrute_protocol_registry[index]) return 0;
     return subbrute_protocol_registry[index]->repeat;
 }
 
@@ -665,6 +667,12 @@ const char* subbrute_protocol_file(SubBruteFileProtocol protocol) {
 }
 
 FuriHalSubGhzPreset subbrute_protocol_convert_preset(FuriString* preset_name) {
+    // FuriHalSubGhzPreset2FSKDev12KAsync is not exported in the current SDK headers,
+    // but exists in the firmware at enum position 4 (added after mntm-012).
+    // Handle it by string comparison like ProtoPirate does.
+    if(furi_string_cmp_str(preset_name, "FuriHalSubGhzPreset2FSKDev12KAsync") == 0) {
+        return (FuriHalSubGhzPreset)4;
+    }
     for(size_t i = FuriHalSubGhzPresetIDLE; i < FuriHalSubGhzPresetCustom; i++) {
         if(furi_string_cmp_str(preset_name, subbrute_protocol_presets[i]) == 0) {
             return i;

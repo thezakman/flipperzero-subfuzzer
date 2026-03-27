@@ -67,6 +67,8 @@ typedef struct {
     bool two_bytes; /**< Two bytes key */
     uint8_t opencode; /**< Opencode */
     uint8_t bit_index; /**< Index of a group to bruteforce in loaded file */
+
+    char raw_file_path[256]; /**< Path to RAW .sub file for replay mode */
 } SubBruteDevice;
 
 /**

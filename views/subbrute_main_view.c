@@ -288,6 +288,8 @@ bool subbrute_main_view_input_ordinary_protocol(
     } else if(event->key == InputKeyOk && is_short) {
         if(index == SubBruteAttackLoadFile) {
             instance->callback(SubBruteCustomEventTypeLoadFile, instance->context);
+        } else if(index == SubBruteAttackAbout) {
+            instance->callback(SubBruteCustomEventTypeAbout, instance->context);
         } else {
             instance->callback(SubBruteCustomEventTypeMenuSelected, instance->context);
         }

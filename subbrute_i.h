@@ -17,7 +17,7 @@
 #include <gui/modules/loading.h>
 #include <gui/modules/variable_item_list.h>
 
-#include <subghz_bruteforcer_icons.h>
+#include <subghz_fuzzer_icons.h>
 
 #include <dialogs/dialogs.h>
 
@@ -31,7 +31,7 @@
 #include "views/subbrute_attack_view.h"
 #include "views/subbrute_main_view.h"
 
-#define SUB_BRUTE_FORCER_VERSION "Sub-GHz BruteForcer 4.0"
+#define SUB_BRUTE_FORCER_VERSION "Sub-GHz Fuzzer 4.0"
 
 #ifdef FURI_DEBUG
 //#define SUBBRUTE_FAST_TRACK false

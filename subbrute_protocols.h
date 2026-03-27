@@ -164,6 +164,7 @@ typedef enum {
     SubBruteAttackPT226224bit4305,
     SubBruteAttackPT226224bit433,
     SubBruteAttackLoadFile,
+    SubBruteAttackAbout,
     SubBruteAttackTotalCount,
 } SubBruteAttacks;
 

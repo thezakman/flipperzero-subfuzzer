@@ -51,6 +51,8 @@ struct SubBruteWorker {
     uint8_t opencode; /**< Opencode */
     bool two_bytes; /**< Two bytes key */
 
+    char raw_file_path[256]; /**< Path to RAW .sub file for replay mode */
+
     // Manual transmit
     uint32_t last_time_tx_data; /**< Last time data was transmitted */
 

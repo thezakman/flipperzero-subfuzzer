@@ -7,6 +7,7 @@
 #include <lib/subghz/subghz_protocol_registry.h>
 // use to clear custom_btn
 #include <lib/subghz/blocks/custom_btn.h>
+#include <lib/subghz/devices/devices.h>
 
 #define TAG                               "SubBruteWorker"
 #define SUBBRUTE_TX_TIMEOUT               6
@@ -211,6 +212,46 @@ bool subbrute_worker_init_file_attack(
     return true;
 }
 
+bool subbrute_worker_init_raw_attack(
+    SubBruteWorker* instance,
+    const char* raw_file_path,
+    uint32_t frequency,
+    FuriHalSubGhzPreset preset,
+    uint8_t repeats) {
+    furi_assert(instance);
+    furi_assert(raw_file_path);
+
+    if(instance->worker_running) {
+        FURI_LOG_W(TAG, "Init Worker when it's running");
+        subbrute_worker_stop(instance);
+    }
+
+    instance->attack = SubBruteAttackLoadFile;
+    instance->frequency = frequency;
+    instance->preset = preset;
+    instance->file = RAWFileProtocol;
+    instance->step = 0;
+    instance->repeat = repeats;
+    instance->max_value = 65535;
+    strncpy(instance->raw_file_path, raw_file_path, sizeof(instance->raw_file_path) - 1);
+    instance->raw_file_path[sizeof(instance->raw_file_path) - 1] = '\0';
+
+    instance->initiated = true;
+    instance->state = SubBruteWorkerStateReady;
+    subbrute_worker_send_callback(instance);
+#ifdef FURI_DEBUG
+    FURI_LOG_I(
+        TAG,
+        "subbrute_worker_init_raw_attack: frequency: %ld, preset: %d, repeats: %d, path: %s",
+        frequency,
+        preset,
+        repeats,
+        raw_file_path);
+#endif
+
+    return true;
+}
+
 bool subbrute_worker_start(SubBruteWorker* instance) {
     furi_assert(instance);
 
@@ -276,41 +317,56 @@ bool subbrute_worker_transmit_current_key(SubBruteWorker* instance, uint64_t ste
     instance->last_time_tx_data = ticks;
     instance->step = step;
 
-    bool result;
-    instance->protocol_name = subbrute_protocol_file(instance->file);
-    FlipperFormat* flipper_format = flipper_format_string_alloc();
-    Stream* stream = flipper_format_get_raw_stream(flipper_format);
+    bool result = false;
 
-    stream_clean(stream);
-
-    if(instance->attack == SubBruteAttackLoadFile) {
-        subbrute_protocol_file_payload(
-            stream,
-            step,
-            instance->bits,
-            instance->te,
-            instance->repeat,
-            instance->load_index,
-            instance->file_key,
-            instance->two_bytes);
+    if(instance->file == RAWFileProtocol) {
+        // RAW replay: build a string FlipperFormat with File_name + Radio_device_name
+        instance->protocol_name = "RAW";
+        FlipperFormat* raw_ff = flipper_format_string_alloc();
+        Stream* raw_stream = flipper_format_get_raw_stream(raw_ff);
+        stream_clean(raw_stream);
+        flipper_format_write_string_cstr(raw_ff, "File_name", instance->raw_file_path);
+        flipper_format_write_string_cstr(
+            raw_ff, "Radio_device_name", subghz_devices_get_name(instance->radio_device));
+        subbrute_worker_subghz_transmit(instance, raw_ff);
+        flipper_format_free(raw_ff);
+        result = true;
     } else {
-        subbrute_protocol_default_payload(
-            stream,
-            instance->file,
-            step,
-            instance->bits,
-            instance->te,
-            instance->repeat,
-            instance->opencode);
+        instance->protocol_name = subbrute_protocol_file(instance->file);
+        FlipperFormat* flipper_format = flipper_format_string_alloc();
+        Stream* stream = flipper_format_get_raw_stream(flipper_format);
+
+        stream_clean(stream);
+
+        if(instance->attack == SubBruteAttackLoadFile) {
+            subbrute_protocol_file_payload(
+                stream,
+                step,
+                instance->bits,
+                instance->te,
+                instance->repeat,
+                instance->load_index,
+                instance->file_key,
+                instance->two_bytes);
+        } else {
+            subbrute_protocol_default_payload(
+                stream,
+                instance->file,
+                step,
+                instance->bits,
+                instance->te,
+                instance->repeat,
+                instance->opencode);
+        }
+
+        subbrute_worker_subghz_transmit(instance, flipper_format);
+        result = true;
+        flipper_format_free(flipper_format);
     }
 
-    subbrute_worker_subghz_transmit(instance, flipper_format);
-
-    result = true;
 #ifdef FURI_DEBUG
     FURI_LOG_W(TAG, "Manual transmit done");
 #endif
-    flipper_format_free(flipper_format);
 
     return result;
 }
@@ -429,33 +485,46 @@ int32_t subbrute_worker_thread(void* context) {
     Stream* stream = flipper_format_get_raw_stream(flipper_format);
 
     while(instance->worker_running) {
-        stream_clean(stream);
-        if(instance->attack == SubBruteAttackLoadFile) {
-            subbrute_protocol_file_payload(
-                stream,
-                instance->step,
-                instance->bits,
-                instance->te,
-                instance->repeat,
-                instance->load_index,
-                instance->file_key,
-                instance->two_bytes);
+        if(instance->file == RAWFileProtocol) {
+            // RAW replay: build a string FlipperFormat with File_name + Radio_device_name
+            // The RAW encoder reads these fields and opens the file itself via a worker thread
+            instance->protocol_name = "RAW";
+            FlipperFormat* raw_ff = flipper_format_string_alloc();
+            Stream* raw_stream = flipper_format_get_raw_stream(raw_ff);
+            stream_clean(raw_stream);
+            flipper_format_write_string_cstr(raw_ff, "File_name", instance->raw_file_path);
+            flipper_format_write_string_cstr(
+                raw_ff, "Radio_device_name", subghz_devices_get_name(instance->radio_device));
+            subbrute_worker_subghz_transmit(instance, raw_ff);
+            flipper_format_free(raw_ff);
         } else {
-            subbrute_protocol_default_payload(
-                stream,
-                instance->file,
-                instance->step,
-                instance->bits,
-                instance->te,
-                instance->repeat,
-                instance->opencode);
-        }
+            stream_clean(stream);
+            if(instance->attack == SubBruteAttackLoadFile) {
+                subbrute_protocol_file_payload(
+                    stream,
+                    instance->step,
+                    instance->bits,
+                    instance->te,
+                    instance->repeat,
+                    instance->load_index,
+                    instance->file_key,
+                    instance->two_bytes);
+            } else {
+                subbrute_protocol_default_payload(
+                    stream,
+                    instance->file,
+                    instance->step,
+                    instance->bits,
+                    instance->te,
+                    instance->repeat,
+                    instance->opencode);
+            }
 #ifdef FURI_DEBUG
-        //FURI_LOG_I(TAG, "Payload: %s", furi_string_get_cstr(payload));
-        //furi_delay_ms(SUBBRUTE_MANUAL_TRANSMIT_INTERVAL / 4);
+            //FURI_LOG_I(TAG, "Payload: %s", furi_string_get_cstr(payload));
+            //furi_delay_ms(SUBBRUTE_MANUAL_TRANSMIT_INTERVAL / 4);
 #endif
-
-        subbrute_worker_subghz_transmit(instance, flipper_format);
+            subbrute_worker_subghz_transmit(instance, flipper_format);
+        }
 
         if(instance->step + 1 > instance->max_value) {
 #ifdef FURI_DEBUG

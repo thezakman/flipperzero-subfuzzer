@@ -94,4 +94,5 @@ typedef enum {
     SubBruteCustomEventTypePopupClosed,
 
     SubBruteCustomEventTypeLoadFile,
+    SubBruteCustomEventTypeAbout,
 } SubBruteCustomEvent;

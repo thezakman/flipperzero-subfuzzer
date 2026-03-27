@@ -78,6 +78,9 @@ bool subbrute_scene_start_on_event(void* context, SceneManagerEvent event) {
             //instance->device->extra_repeats = extra_repeats;
             scene_manager_next_scene(instance->scene_manager, SubBruteSceneLoadFile);
             consumed = true;
+        } else if(event.event == SubBruteCustomEventTypeAbout) {
+            scene_manager_next_scene(instance->scene_manager, SubBruteSceneAbout);
+            consumed = true;
         }
     } else if(event.type == SceneManagerEventTypeBack) {
         //exit app

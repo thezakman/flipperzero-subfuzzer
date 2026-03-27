@@ -304,8 +304,18 @@ uint8_t subbrute_device_load_from_file(SubBruteDevice* instance, const char* fil
         instance->decoder_result = subghz_receiver_search_decoder_base_by_name(
             instance->receiver, furi_string_get_cstr(temp_str));
 
-        if((!instance->decoder_result) || (strcmp(protocol_file, "RAW") == 0) ||
-           (strcmp(protocol_file, "Unknown") == 0)) {
+        // RAW: replay mode — save file path and return success, skip key parsing
+        if(strcmp(protocol_file, "RAW") == 0) {
+            strncpy(instance->raw_file_path, file_path, sizeof(instance->raw_file_path) - 1);
+            instance->raw_file_path[sizeof(instance->raw_file_path) - 1] = '\0';
+            instance->attack = SubBruteAttackLoadFile;
+            instance->current_step = 0;
+            instance->max_value = 65535;
+            result = SubBruteFileResultOk;
+            break;
+        }
+
+        if((!instance->decoder_result) || (strcmp(protocol_file, "Unknown") == 0)) {
             FURI_LOG_E(TAG, error_device_protocol_unsupported);
             result = SubBruteFileResultProtocolNotSupported;
             break;

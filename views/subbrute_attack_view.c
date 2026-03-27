@@ -4,7 +4,7 @@
 #include <input/input.h>
 #include <gui/elements.h>
 #include <gui/icon_animation.h>
-#include <subghz_bruteforcer_icons.h>
+#include <subghz_fuzzer_icons.h>
 
 #define TAG "SubBruteAttackView"
 

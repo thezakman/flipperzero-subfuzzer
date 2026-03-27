@@ -1,3 +1,4 @@
+ADD_SCENE(subbrute, about, About)
 ADD_SCENE(subbrute, load_file, LoadFile)
 ADD_SCENE(subbrute, load_select, LoadSelect)
 ADD_SCENE(subbrute, run_attack, RunAttack)

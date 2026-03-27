@@ -41,28 +41,46 @@ void subbrute_scene_load_file_on_enter(void* context) {
                 instance->settings, subbrute_main_view_get_repeats(instance->view_main));
             uint8_t extra_repeats = subbrute_settings_get_current_repeats(instance->settings);
 
-            load_result = subbrute_device_attack_set(
-                instance->device, instance->settings->last_index, extra_repeats);
-            if(load_result == SubBruteFileResultOk) {
-                if(!subbrute_worker_init_file_attack(
+            if(instance->device->file_protocol_info->file == RAWFileProtocol) {
+                // RAW: replay mode — skip key-byte selection, go straight to attack
+                instance->device->extra_repeats = extra_repeats;
+                if(!subbrute_worker_init_raw_attack(
                        instance->worker,
-                       instance->device->current_step,
-                       instance->device->bit_index,
-                       instance->device->key_from_file,
-                       instance->device->file_protocol_info,
-                       extra_repeats,
-                       instance->device->two_bytes)) {
-                    furi_crash("Invalid attack set!");
+                       instance->device->raw_file_path,
+                       instance->device->file_protocol_info->frequency,
+                       instance->device->file_protocol_info->preset,
+                       extra_repeats)) {
+                    furi_crash("Invalid RAW attack set!");
                 }
-                // Ready to run!
-                FURI_LOG_I(TAG, "Ready to run");
-                load_result = true;
+                FURI_LOG_I(TAG, "RAW ready to replay");
+            } else {
+                load_result = subbrute_device_attack_set(
+                    instance->device, instance->settings->last_index, extra_repeats);
+                if(load_result == SubBruteFileResultOk) {
+                    if(!subbrute_worker_init_file_attack(
+                           instance->worker,
+                           instance->device->current_step,
+                           instance->device->bit_index,
+                           instance->device->key_from_file,
+                           instance->device->file_protocol_info,
+                           extra_repeats,
+                           instance->device->two_bytes)) {
+                        furi_crash("Invalid attack set!");
+                    }
+                    // Ready to run!
+                    FURI_LOG_I(TAG, "Ready to run");
+                }
             }
         }
 
         if(load_result == SubBruteFileResultOk) {
             subbrute_settings_save(instance->settings);
-            scene_manager_next_scene(instance->scene_manager, SubBruteSceneLoadSelect);
+            if(instance->device->file_protocol_info != NULL &&
+               instance->device->file_protocol_info->file == RAWFileProtocol) {
+                scene_manager_next_scene(instance->scene_manager, SubBruteSceneSetupAttack);
+            } else {
+                scene_manager_next_scene(instance->scene_manager, SubBruteSceneLoadSelect);
+            }
         } else {
             FURI_LOG_E(TAG, "Returned error: %d", load_result);
 

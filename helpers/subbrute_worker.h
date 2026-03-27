@@ -125,6 +125,27 @@ bool subbrute_worker_init_file_attack(
     bool two_bytes);
 
 /**
+ * @brief Initializes a RAW replay attack worker.
+ *
+ * For RAW .sub files there is no key to vary — the original signal is replayed
+ * as-is. The worker opens the file on each transmission cycle and sends it
+ * through the SubGHz radio until the user presses Stop.
+ *
+ * @param instance     A pointer to a SubBruteWorker instance.
+ * @param raw_file_path  Absolute path to the .sub RAW file.
+ * @param frequency    Transmission frequency in Hz.
+ * @param preset       SubGHz hardware preset.
+ * @param repeats      Number of extra repeats shown in the UI.
+ * @return true on success.
+ */
+bool subbrute_worker_init_raw_attack(
+    SubBruteWorker* instance,
+    const char* raw_file_path,
+    uint32_t frequency,
+    FuriHalSubGhzPreset preset,
+    uint8_t repeats);
+
+/**
  * @brief Start the SubBruteWorker instance.
  *
  * This function starts the SubBruteWorker instance, allowing it to begin its work.
